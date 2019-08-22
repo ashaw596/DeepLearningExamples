@@ -142,57 +142,79 @@ def main(args):
             bert_preprocessing_command += ' --random_seed=' + str(args.random_seed)
             bert_preprocessing_command += ' --dupe_factor=' + str(args.dupe_factor)
             bert_preprocessing_process = subprocess.Popen(bert_preprocessing_command, shell=True)
+            #return bert_preprocessing_process
+
             bert_preprocessing_process.communicate()
 
-            last_process = bert_preprocessing_process
+            #last_process = bert_preprocessing_process
 
             # This could be better optimized (fine if all take equal time)
-            if shard_id % args.n_processes == 0 and shard_id > 0:
-                bert_preprocessing_process.wait()
-
+            #if shard_id % args.n_processes == 0 and shard_id > 0:
+            bert_preprocessing_process.wait()
+        from multiprocessing import Pool
+        from multiprocessing.pool import ThreadPool
+        pool = Pool(args.n_processes)
         for i in range(args.n_training_shards):
-            create_record_worker(args.output_file_prefix + '_training', i)
+            pool.apply_async(create_record_worker, args.output_file_prefix + '_training', i)
+            #create_record_worker(args.output_file_prefix + '_training', i)
 
-        last_process.wait()
+        #last_process.wait()
 
         for i in range(args.n_test_shards):
-            create_record_worker(args.output_file_prefix + '_test', i)
-
-        last_process.wait()
+            pool.apply_async(create_record_worker, args.output_file_prefix + '_test', i)
+            #create_record_worker(args.output_file_prefix + '_test', i)
+        pool.close()
+        pool.join()
+        #last_process.wait()
 
 
     elif args.action == 'create_hdf5_files':
         last_process = None
-
-        def create_record_worker(filename_prefix, shard_id, output_format='hdf5'):
+        os.makedirs(directory_structure['hdf5'] + '/' + args.dataset + '/', exist_ok=True)
+        def create_record_worker(input_filename_prefix,filename_prefix, shard_id, output_format='hdf5'):
             bert_preprocessing_command = 'python /workspace/bert/create_pretraining_data.py'
-            bert_preprocessing_command += ' --input_file=' + directory_structure['sharded'] + '/' + args.dataset + '/' + filename_prefix + '_' + str(shard_id) + '.txt'
-            bert_preprocessing_command += ' --output_file=' + directory_structure['tfrecord'] + '/' + args.dataset + '/' + filename_prefix + '_' + str(shard_id) + '.' + output_format
+            print(' --input_file=' + directory_structure['sharded'] + '/' + args.dataset + '/' + input_filename_prefix + '_' + str(shard_id) + '.txt')
+            bert_preprocessing_command += ' --input_file=' + directory_structure['sharded'] + '/' + args.dataset + '/' + input_filename_prefix + '_' + str(shard_id) + '.txt'
+            bert_preprocessing_command += ' --output_file=' + directory_structure['hdf5'] + '/' + args.dataset + '/' + filename_prefix + '_' + str(shard_id) + '.' + output_format
             bert_preprocessing_command += ' --vocab_file=' + args.vocab_file
             bert_preprocessing_command += ' --do_lower_case' if args.do_lower_case else ''
-            bert_preprocessing_command += ' --max_seq_length=' + args.max_seq_length
-            bert_preprocessing_command += ' --max_predictions_per_seq=' + args.max_predictions_per_seq
-            bert_preprocessing_command += ' --masked_lm_prob=' + args.masked_lm_prob
-            bert_preprocessing_command += ' --random_seed=' + args.random_seed
-            bert_preprocessing_command += ' --dupe_factor=' + args.dupe_factor
+            bert_preprocessing_command += ' --max_seq_length=' + str(args.max_seq_length)
+            bert_preprocessing_command += ' --max_predictions_per_seq=' + str(args.max_predictions_per_seq)
+            bert_preprocessing_command += ' --masked_lm_prob=' + str(args.masked_lm_prob)
+            bert_preprocessing_command += ' --random_seed=' + str(args.random_seed)
+            bert_preprocessing_command += ' --dupe_factor=' + str(args.dupe_factor)
             bert_preprocessing_process = subprocess.Popen(bert_preprocessing_command, shell=True)
             bert_preprocessing_process.communicate()
 
-            last_process = bert_preprocessing_process
+            #last_process = bert_preprocessing_process
 
             # This could be better optimized (fine if all take equal time)
-            if shard_id % args.n_processes == 0 and shard_id > 0:
-                bert_preprocessing_process.wait()
-
+            #if shard_id % args.n_processes == 0 and shard_id > 0:
+            bert_preprocessing_process.wait()
+        from multiprocessing import Pool
+        from multiprocessing.pool import ThreadPool
+        pool = ThreadPool(args.n_processes)
         for i in range(args.n_training_shards):
-            create_record_worker(args.output_file_prefix + '_training', i)
+            pool.apply_async(create_record_worker, (args.input_file_prefix + '_training', args.output_file_prefix + '_training', i))
+            #create_record_worker(args.output_file_prefix + '_training', i)
 
-        last_process.wait()
+        #last_process.wait()
 
         for i in range(args.n_test_shards):
-            create_record_worker(args.output_file_prefix + '_test', i)
+            pool.apply_async(create_record_worker, (args.input_file_prefix + '_test' , args.output_file_prefix + '_test', i))
+            #create_record_worker(args.output_file_prefix + '_test', i)
+        pool.close()
+        pool.join()
 
-        last_process.wait()
+        #for i in range(args.n_training_shards):
+        #    create_record_worker(args.output_file_prefix + '_training', i)
+
+        #last_process.wait()
+
+        #for i in range(args.n_test_shards):
+        #    create_record_worker(args.output_file_prefix + '_test', i)
+
+        #last_process.wait()
 
 
 if __name__ == "__main__":
@@ -240,6 +262,11 @@ if __name__ == "__main__":
         '--output_file_prefix',
         type=str,
         help='Specify the naming convention (prefix) of the output files'
+    )
+    parser.add_argument(
+        '--input_file_prefix',
+        type=str,
+        help='Specify the naming convention (prefix) of the input files'
     )
 
     parser.add_argument(

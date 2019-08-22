@@ -272,6 +272,7 @@ def prepare_model_and_optimizer(args, device):
     model = BertForPreTraining(config)
 
     checkpoint = None
+    print(args)
     if not args.resume_from_checkpoint:
         global_step = 0
     else:

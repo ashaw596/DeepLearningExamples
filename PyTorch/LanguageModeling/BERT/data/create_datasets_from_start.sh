@@ -20,8 +20,8 @@ python3 /workspace/bert/data/bertPrep.py --action sharding --dataset books_wiki_
 
 
 # Create HDF5 files Phase 1
-python3 /workspace/bert/data/bertPrep.py --action create_hdf5_files --dataset books_wiki_en_corpus --max_seq_length 128 --max_predictions_per_seq 20
+python3 /workspace/bert/data/bertPrep.py --output_file_prefix books_wiki_en_corpus --action create_hdf5_files --dataset books_wiki_en_corpus --max_seq_length 128 --max_predictions_per_seq 20
 
 
 # Create HDF5 files Phase 2
-python3 /workspace/bert/data/bertPrep.py --action create_hdf5_files --dataset books_wiki_en_corpus --max_seq_length 512 --max_predictions_per_seq 80
+python3 /workspace/bert/data/bertPrep.py --output_file_prefix merged_wiki+books_phase2  --action create_hdf5_files --dataset books_wiki_en_corpus --max_seq_length 512 --max_predictions_per_seq 80

@@ -6,7 +6,7 @@ CHECKPOINT_DIR=${3:-"${PWD}/checkpoints"}
 RESULTS_DIR=${4:-"${PWD}/results"}
 
 docker run -it --rm \
-  --runtime=nvidia \
+  --gpus all \
   --shm-size=1g \
   --ulimit memlock=-1 \
   --ulimit stack=67108864 \
