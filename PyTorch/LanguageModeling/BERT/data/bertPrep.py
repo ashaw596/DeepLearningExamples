@@ -72,7 +72,7 @@ def main(args):
                 wikiextractor_process = subprocess.run(wikiextractor_command, shell=True, check=True)
                 #wikiextractor_process.communicate()
 
-            wiki_path = working_dir + '/' + directory_structure['extracted'] + '/wikicorpus_en'
+            wiki_path = directory_structure['extracted'] + '/wikicorpus_en'
             output_filename = directory_structure['formatted'] + '/wikicorpus_en_one_article_per_line.txt'
             wiki_formatter = WikicorpusTextFormatting.WikicorpusTextFormatting(wiki_path, output_filename, recursive=True)
             wiki_formatter.merge()
@@ -186,25 +186,31 @@ def main(args):
             bert_preprocessing_command += ' --dupe_factor=' + str(args.dupe_factor)
             bert_preprocessing_process = subprocess.Popen(bert_preprocessing_command, shell=True)
             bert_preprocessing_process.communicate()
-
-            last_process = bert_preprocessing_process
+            bert_preprocessing_process.wait()
+            #last_process = bert_preprocessing_process
 
             # This could be better optimized (fine if all take equal time)
-            if shard_id % args.n_processes == 0 and shard_id > 0:
-                bert_preprocessing_process.wait()
-            return last_process
+            #if shard_id % args.n_processes == 0 and shard_id > 0:
+            #    bert_preprocessing_process.wait()
+            #return last_process
 
+        from multiprocessing import Pool
+        from multiprocessing.pool import ThreadPool
+        pool = ThreadPool(args.n_processes)
         output_file_prefix = args.dataset
-
         for i in range(args.n_training_shards):
-            last_process = create_record_worker(output_file_prefix + '_training', i)
+            pool.apply_async(create_record_worker, (output_file_prefix + '_training', i))
+            #last_process = create_record_worker(output_file_prefix + '_training', i)
 
-        last_process.wait()
+        #last_process.wait()
 
         for i in range(args.n_test_shards):
-            last_process = create_record_worker(output_file_prefix + '_test', i)
+            pool.apply_async(create_record_worker, (output_file_prefix + '_test', i))
+            #last_process = create_record_worker(output_file_prefix + '_test', i)
 
-        last_process.wait()
+        pool.close()
+        pool.join()
+        #last_process.wait()
 
 
 if __name__ == "__main__":

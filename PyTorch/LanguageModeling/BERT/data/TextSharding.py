@@ -47,7 +47,7 @@ class Sharding:
         print('End: Loading Articles: There are', len(self.articles), 'articles.')
 
 
-    def segment_articles_into_sentences(self, segmenter):
+    def segment_articles_into_sentences(self, segmenter, use_multiprocessing = 'pool'):
         print('Start: Sentence Segmentation')
         if len(self.articles) is 0:
             self.load_articles()
@@ -55,14 +55,21 @@ class Sharding:
         assert len(self.articles) is not 0, 'Please check that input files are present and contain data.'
 
         # TODO: WIP: multiprocessing (create independent ranges and spawn processes)
-        use_multiprocessing = 'serial'
 
         def chunks(data, size=len(self.articles)):
             it = iter(data)
             for i in range(0, len(data), size):
                 yield {k: data[k] for k in islice(it, size)}
+        if use_multiprocessing == "pool":
+            n_processes = 32
+            pool = multiprocessing.Pool(processes=n_processes)
 
-        if use_multiprocessing == 'manager':
+            for i, sentence in enumerate(pool.imap(segmenter.segment_string, (self.articles[article] for article in self.articles))):
+                self.sentences[i] = sentence
+                if i % 5000 == 0:
+                    print('Segmenting article', i)
+            
+        elif use_multiprocessing == 'manager':
             manager = multiprocessing.Manager()
             return_dict = manager.dict()
             jobs = []
